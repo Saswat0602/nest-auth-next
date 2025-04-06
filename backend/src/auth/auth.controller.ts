@@ -10,6 +10,7 @@ import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { Role } from '@prisma/client';
 
 @Controller('auth')
 export class AuthController {
@@ -20,26 +21,37 @@ export class AuthController {
   ) {}
 
   @Post('register')
-  async register(@Body() body: { email: string; password: string }) {
+  async register(
+    @Body()
+    body: {
+      email: string;
+      password: string;
+      name: string;
+      role?: Role;
+      secretKey?: string;
+    },
+  ) {
     try {
-      const user = await this.userService.create(body);
-      return this.authService.login(user);
+      const user = await this.userService.createUserWithOTP(body);
+      return { message: 'OTP sent. Please verify your email.' };
     } catch (err) {
       if (err instanceof PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new BadRequestException('Email already exists');
       }
-      console.error('Register Error:', err);
       throw new InternalServerErrorException('Registration failed');
     }
+  }
+
+  @Post('verify-otp')
+  async verifyOTP(@Body() body: { email: string; otp: string }) {
+    await this.userService.verifyOTP(body.email, body.otp);
+    return { message: 'Email verified. You can now login.' };
   }
 
   @Post('login')
   async login(@Body() body: { email: string; password: string }) {
     try {
       const user = await this.userService.validateUser(body);
-      if (!user) {
-        throw new UnauthorizedException('Invalid credentials');
-      }
       return this.authService.login(user);
     } catch (err) {
       console.error('Login Error:', err);
@@ -60,8 +72,19 @@ export class AuthController {
 
       return this.authService.login(user);
     } catch (err) {
-      console.error('Refresh Token Error:', err);
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
+  }
+
+  @Post('forgot-password')
+  async forgot(@Body() body: { email: string }) {
+    const token = await this.userService.initiatePasswordReset(body.email);
+    return { message: 'Reset link sent', token };
+  }
+
+  @Post('reset-password')
+  async reset(@Body() body: { token: string; newPassword: string }) {
+    await this.userService.resetPassword(body.token, body.newPassword);
+    return { message: 'Password updated successfully' };
   }
 }

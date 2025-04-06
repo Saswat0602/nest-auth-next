@@ -8,8 +8,50 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
+  id             Int       @id @default(autoincrement())
+  email          String    @unique
+  password       String
+  name           String
+  role           Role      @default(REGULAR)
+  isActive       Boolean   @default(false)
+  otpCode        String? // For email confirmation
+  otpExpiresAt   DateTime? // OTP expiry
+  resetToken     String? // For password reset
+  resetExpiresAt DateTime? // Reset token expiry
+
+  addresses Address[] @relation("UserAddresses")
+
+  defaultAddressId Int?     @unique // 👈 Fix: must be unique for 1-to-1
+  defaultAddress   Address? @relation("DefaultAddress", fields: [defaultAddressId], references: [id])
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Address {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation("UserAddresses", fields: [userId], references: [id])
+
+  defaultForUser User? @relation("DefaultAddress") // 👈 Opposite of defaultAddress
+
+  label     String
+  street    String
+  city      String
+  state     String
+  country   String
+  zipCode   String
+  latitude  Float
+  longitude Float
+  isDefault Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  SUPERADMIN
+  MANAGER
+  REGULAR
+  GUEST
 }

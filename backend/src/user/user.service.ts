@@ -1,17 +1,44 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../utils/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { Role } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: { email: string; password: string }) {
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+  async createUserWithOTP(data: {
+    email: string;
+    password: string;
+    name: string;
+    role?: Role;
+    secretKey?: string;
+  }) {
+    const { email, password, name, role = Role.REGULAR, secretKey } = data;
+
+    if (role === Role.SUPERADMIN && secretKey !== process.env.SUPER_ADMIN_SECRET) {
+      throw new ForbiddenException('Invalid secret key for super admin');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
+    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+
     return this.prisma.user.create({
       data: {
-        email: data.email,
+        email,
         password: hashedPassword,
+        name,
+        role,
+        otpCode,
+        otpExpiresAt,
+        isActive: false,
       },
     });
   }
@@ -21,11 +48,67 @@ export class UserService {
     if (!user) throw new UnauthorizedException('Invalid credentials');
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
+    if (!user.isActive) throw new UnauthorizedException('Email not verified');
     return user;
   }
 
   async findById(id: number) {
     return this.prisma.user.findUnique({ where: { id } });
   }
-  
+
+  async verifyOTP(email: string, otp: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user || user.otpCode !== otp || user.otpExpiresAt < new Date()) {
+      throw new UnauthorizedException('Invalid or expired OTP');
+    }
+    return this.prisma.user.update({
+      where: { email },
+      data: {
+        isActive: true,
+        otpCode: null,
+        otpExpiresAt: null,
+      },
+    });
+  }
+
+  async initiatePasswordReset(email: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const resetToken = randomUUID();
+    const resetExpiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 min
+
+    await this.prisma.user.update({
+      where: { email },
+      data: {
+        resetToken,
+        resetExpiresAt,
+      },
+    });
+
+    return resetToken; // You'd send this in an email
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetExpiresAt: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!user) throw new UnauthorizedException('Invalid or expired token');
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    return this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashed,
+        resetToken: null,
+        resetExpiresAt: null,
+      },
+    });
+  }
 }
