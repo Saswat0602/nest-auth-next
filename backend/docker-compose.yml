@@ -9,7 +9,14 @@ services:
       - db
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/mydb
-      JWT_SECRET: saswat06
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+    volumes:
+      - .:/app
+      - /app/node_modules  # prevent overwriting node_modules from host
+    command: npm run start:dev  # use dev mode with hot-reload (ts-node-dev or similar)
 
   db:
     image: postgres:15

@@ -23,4 +23,9 @@ export class UserService {
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
     return user;
   }
+
+  async findById(id: number) {
+    return this.prisma.user.findUnique({ where: { id } });
+  }
+  
 }

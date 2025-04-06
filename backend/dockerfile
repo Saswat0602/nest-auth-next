@@ -1,6 +1,12 @@
 # base image
 FROM node:18
 
+# install postgresql-client (for pg_isready)
+RUN apt-get update && apt-get install -y postgresql-client
+
+# install ts-node-dev globally
+RUN npm install -g ts-node-dev
+
 # set working directory
 WORKDIR /app
 
@@ -8,21 +14,15 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# copy prisma schema BEFORE generating
-COPY prisma ./prisma
-
-# copy wait-for.sh
+# copy wait-for script and make it executable
 COPY scripts/wait-for.sh ./wait-for.sh
 RUN chmod +x wait-for.sh
 
-# copy source files
+# copy everything else
 COPY . .
 
-# generate prisma client
+# generate prisma client only
 RUN npx prisma generate
 
-# build app
-RUN npm run build
-
-# run app via wait-for script
-CMD ["./wait-for.sh", "db", "npm", "run", "start:prod"]
+# start app with hot-reload
+CMD ["./wait-for.sh", "db", "ts-node-dev", "--respawn", "--transpile-only", "src/main.ts"]
