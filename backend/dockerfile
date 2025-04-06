@@ -1,21 +1,28 @@
 # base image
 FROM node:18
 
-# create app directory
+# set working directory
 WORKDIR /app
 
 # install dependencies
 COPY package*.json ./
 RUN npm install
 
-# copy app source
+# copy prisma schema BEFORE generating
+COPY prisma ./prisma
+
+# copy wait-for.sh
+COPY scripts/wait-for.sh ./wait-for.sh
+RUN chmod +x wait-for.sh
+
+# copy source files
 COPY . .
 
-# ✅ generate Prisma client
+# generate prisma client
 RUN npx prisma generate
 
-# build the app
+# build app
 RUN npm run build
 
-# start the app
-CMD ["npm", "run", "start:prod"]
+# run app via wait-for script
+CMD ["./wait-for.sh", "db", "npm", "run", "start:prod"]
