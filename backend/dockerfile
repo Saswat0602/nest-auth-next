@@ -1,0 +1,18 @@
+# base image
+FROM node:18
+
+# create app directory
+WORKDIR /app
+
+# install dependencies
+COPY package*.json ./
+RUN npm install
+
+# copy app source
+COPY . .
+
+# build the app
+RUN npm run build
+
+# start the app
+CMD ["npm", "run", "start:prod"]
