@@ -27,8 +27,8 @@ export class UserService {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
-    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins from now
 
     return this.prisma.user.create({
       data: {
@@ -36,19 +36,29 @@ export class UserService {
         password: hashedPassword,
         name,
         role,
+        isActive: false,
         otpCode,
         otpExpiresAt,
-        isActive: false,
       },
     });
   }
 
-  async validateUser({ email, password }: { email: string; password: string }) {
+  async validateUser({
+    email,
+    password,
+  }: {
+    email: string;
+    password: string;
+  }) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) throw new UnauthorizedException('Invalid credentials');
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
-    if (!user.isActive) throw new UnauthorizedException('Email not verified');
+
+    if (!user.isActive)
+      throw new UnauthorizedException('Please verify your email first');
+
     return user;
   }
 
@@ -58,9 +68,16 @@ export class UserService {
 
   async verifyOTP(email: string, otp: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user || user.otpCode !== otp || user.otpExpiresAt < new Date()) {
+
+    if (
+      !user ||
+      user.otpCode !== otp ||
+      !user.otpExpiresAt ||
+      user.otpExpiresAt < new Date()
+    ) {
       throw new UnauthorizedException('Invalid or expired OTP');
     }
+
     return this.prisma.user.update({
       where: { email },
       data: {
@@ -76,7 +93,7 @@ export class UserService {
     if (!user) throw new NotFoundException('User not found');
 
     const resetToken = randomUUID();
-    const resetExpiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 min
+    const resetExpiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
 
     await this.prisma.user.update({
       where: { email },
@@ -86,7 +103,8 @@ export class UserService {
       },
     });
 
-    return resetToken; // You'd send this in an email
+    // Here you should send this via email instead of returning
+    return resetToken;
   }
 
   async resetPassword(token: string, newPassword: string) {
