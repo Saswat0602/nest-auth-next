@@ -7,7 +7,7 @@ up:
 	docker compose -p $(PROJECT) up --build
 
 down:
-	docker compose -p $(PROJECT) down -v
+	docker compose -p $(PROJECT) down
 
 restart: down up
 
