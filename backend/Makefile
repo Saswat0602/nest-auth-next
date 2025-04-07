@@ -1,30 +1,32 @@
-# Project Makefile
+# Project Makefile with authapp project name
 
-# Docker compose commands
+PROJECT=authapp
+
+# Docker Compose Commands
 up:
-	docker-compose up --build
+	docker compose -p $(PROJECT) up --build
 
 down:
-	docker-compose down -v
+	docker compose -p $(PROJECT) down -v
 
 restart: down up
 
 logs:
-	docker-compose logs -f
+	docker compose -p $(PROJECT) logs -f
 
 # Prisma commands (runs inside the container)
 migrate:
-	docker-compose exec backend npx prisma migrate dev --name init
+	docker compose -p $(PROJECT) exec auth_backend npx prisma migrate dev --name init
 
 generate:
-	docker-compose exec backend npx prisma generate
+	docker compose -p $(PROJECT) exec auth_backend npx prisma generate
 
 studio:
-	docker-compose exec backend npx prisma studio
+	docker compose -p $(PROJECT) exec auth_backend npx prisma studio
 
 seed:
-	docker-compose exec backend npx prisma db seed
+	docker compose -p $(PROJECT) exec auth_backend npx prisma db seed
 
 # Access the backend container shell
 shell:
-	docker-compose exec backend sh
+	docker compose -p $(PROJECT) exec auth_backend sh
