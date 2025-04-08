@@ -3,15 +3,20 @@ import {
   UnauthorizedException,
   ForbiddenException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../utils/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { MailerService } from '../mailer/mailer.service';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mailService: MailerService,
+  ) { }
 
   async createUserWithOTP(data: {
     email: string;
@@ -22,15 +27,19 @@ export class UserService {
   }) {
     const { email, password, name, role = Role.REGULAR, secretKey } = data;
 
+    if (!password) {
+      throw new BadRequestException('Password is required');
+    }
+
     if (role === Role.SUPERADMIN && secretKey !== process.env.SUPER_ADMIN_SECRET) {
       throw new ForbiddenException('Invalid secret key for super admin');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
-    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins from now
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-    return this.prisma.user.create({
+    const user = await this.prisma.user.create({
       data: {
         email,
         password: hashedPassword,
@@ -41,15 +50,14 @@ export class UserService {
         otpExpiresAt,
       },
     });
+
+    await this.mailService.sendOTPEmail(email, otpCode);
+
+    return user;
   }
 
-  async validateUser({
-    email,
-    password,
-  }: {
-    email: string;
-    password: string;
-  }) {
+
+  async validateUser({ email, password }: { email: string; password: string }) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
@@ -68,10 +76,9 @@ export class UserService {
 
   async verifyOTP(email: string, otp: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
-
     if (
       !user ||
-      user.otpCode !== otp ||
+      String(user.otpCode) !== String(otp) ||
       !user.otpExpiresAt ||
       user.otpExpiresAt < new Date()
     ) {
@@ -93,7 +100,7 @@ export class UserService {
     if (!user) throw new NotFoundException('User not found');
 
     const resetToken = randomUUID();
-    const resetExpiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
+    const resetExpiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
     await this.prisma.user.update({
       where: { email },
@@ -103,8 +110,10 @@ export class UserService {
       },
     });
 
-    // Here you should send this via email instead of returning
-    return resetToken;
+    // ✅ Use sendResetToken method
+    await this.mailService.sendResetToken(email, resetToken);
+
+    return true;
   }
 
   async resetPassword(token: string, newPassword: string) {
