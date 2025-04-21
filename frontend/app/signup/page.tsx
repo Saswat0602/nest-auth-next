@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { signIn } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -12,7 +13,7 @@ import { FcGoogle } from 'react-icons/fc'
 
 export default function SignUpPage() {
   const router = useRouter()
-  const { register, googleLogin, error } = useAuth()
+  const { register, error } = useAuth()
   
   const [formState, setFormState] = useState({
     name: '',
@@ -93,15 +94,9 @@ export default function SignUpPage() {
     }
   }
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setIsGoogleLoading(true)
-    try {
-      await googleLogin()
-    } catch (error) {
-      console.error('Google login error:', error)
-    } finally {
-      setIsGoogleLoading(false)
-    }
+    signIn('google', { callbackUrl: '/dashboard' })
   }
 
   return (

@@ -5,23 +5,26 @@ import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/Button';
 import { useAuth } from '@/lib/auth-context';
+import { useSession } from 'next-auth/react';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const { user, token, logout } = useAuth();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if the user is authenticated
-    if (!token) {
+    // Wait for NextAuth session or custom token
+    if (status === 'loading') return;
+    const isAuthed = !!token || status === 'authenticated';
+    if (!isAuthed) {
       router.push('/signin');
       return;
     }
-    
     setLoading(false);
-  }, [token, router]);
+  }, [status, token, router]);
 
-  if (loading) {
+  if (loading || status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-600"></div>
@@ -56,12 +59,12 @@ export default function DashboardPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-gray-50 p-4 rounded-md">
                   <p className="text-sm text-gray-500 mb-1">Full Name</p>
-                  <p className="font-medium">{user?.name || 'N/A'}</p>
+                  <p className="font-medium">{user?.name ?? session?.user?.name ?? 'N/A'}</p>
                 </div>
                 
                 <div className="bg-gray-50 p-4 rounded-md">
                   <p className="text-sm text-gray-500 mb-1">Email Address</p>
-                  <p className="font-medium">{user?.email || 'N/A'}</p>
+                  <p className="font-medium">{user?.email ?? session?.user?.email ?? 'N/A'}</p>
                 </div>
                 
                 <div className="bg-gray-50 p-4 rounded-md">
