@@ -1,88 +1,110 @@
 'use client'
 
-import { motion, useScroll, useTransform } from 'framer-motion'
-import { useRef } from 'react'
+import { motion } from 'framer-motion'
 import Link from 'next/link'
-import Image from 'next/image'
-import Navbar from '@/components/Navbar'
-
-const sections = [
-  {
-    title: 'Welcome to Auth App',
-    subtitle: 'Modern authentication with email, OTP, and Google login.',
-    image: 'https://images.unsplash.com/photo-1503264116251-35a269479413?q=80&w=2100&auto=format&fit=crop&ixlib=rb-4.0.3',
-  },
-  {
-    title: 'Fast and Secure',
-    subtitle: 'Built with Next.js, NextAuth, Tailwind & Framer Motion.',
-    image: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1986&auto=format&fit=crop&ixlib=rb-4.0.3',
-  },
-  {
-    title: 'Get Started Now',
-    subtitle: 'Click below to sign in or register instantly.',
-    image: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3',
-  },
-]
+import { Button } from '@/components/Button'
 
 export default function LandingPage() {
-  const ref = useRef(null)
-  const { scrollYProgress } = useScroll({ target: ref })
-  const scale = useTransform(scrollYProgress, [0, 1], [1, 1.1])
-
   return (
-<motion.main
-  ref={ref}
-  className="h-screen w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth"
->
-      <Navbar />
-
-      {sections.map((section, i) => (
-        <section
-          key={i}
-          className="snap-start h-screen w-full relative flex flex-col items-center justify-center text-white overflow-hidden"
-        >
-          <motion.div
-            className="absolute inset-0 z-0"
-            style={{ scale }}
-          >
-            <Image
-              src={section.image}
-              alt="bg"
-              fill
-              className="object-cover filter brightness-75"
-              priority
-            />
-          </motion.div>
-
-          <motion.div
-            className="z-10 text-center px-6"
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
+    <main className="w-full">
+      {/* Hero Section */}
+      <div
+        className="w-full h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-800 text-white"
+      >
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.h1 
+            className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
           >
-            <h1 className="text-4xl md:text-6xl font-bold mb-4">{section.title}</h1>
-            <p className="text-lg md:text-xl max-w-xl mx-auto mb-8">{section.subtitle}</p>
-
-            {i === 2 && (
-              <div className="flex justify-center gap-4">
-                <Link
-                  href="/signin"
-                  className="bg-white text-indigo-600 px-4 py-2 rounded font-semibold shadow hover:scale-105 transition"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/signup"
-                  className="bg-white text-indigo-600 px-4 py-2 rounded font-semibold shadow hover:scale-105 transition"
-                >
-                  Sign Up
-                </Link>
-              </div>
-            )}
+            Secure Authentication <br/> Made Simple
+          </motion.h1>
+          
+          <motion.p 
+            className="text-lg md:text-xl mb-12 max-w-2xl mx-auto opacity-90"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            Complete authentication system with email verification, OTP confirmation, 
+            and secure password management.
+          </motion.p>
+          
+          <motion.div 
+            className="flex flex-wrap justify-center gap-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
+            <Link href="/signin" className="block">
+              <Button variant="primary" className="text-lg px-8 py-3">
+                Sign In
+              </Button>
+            </Link>
+            <Link href="/signup" className="block">
+              <Button variant="outline" className="text-lg px-8 py-3 bg-white/10 hover:bg-white/20">
+                Sign Up
+              </Button>
+            </Link>
           </motion.div>
-        </section>
-      ))}
-</motion.main>
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <div className="w-full bg-white py-24 px-6">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16 text-gray-900">Key Features</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            {[
+              {
+                title: "Secure Authentication",
+                description: "Industry-standard security practices with JWT token-based authentication.",
+                icon: "🔐"
+              },
+              {
+                title: "Email Verification",
+                description: "Verify new accounts with one-time passwords sent directly to email.",
+                icon: "✉️"
+              },
+              {
+                title: "Password Recovery",
+                description: "Simple password reset flow for users who forget their credentials.",
+                icon: "🔄"
+              }
+            ].map((feature, i) => (
+              <motion.div 
+                key={i}
+                className="bg-gray-50 p-6 rounded-xl shadow-sm"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <div className="text-4xl mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-semibold mb-2 text-gray-900">{feature.title}</h3>
+                <p className="text-gray-600">{feature.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <div className="w-full bg-indigo-900 text-white py-20 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to get started?</h2>
+          <p className="text-lg md:text-xl mb-10 opacity-90">
+            Create your account now and experience our secure authentication system.
+          </p>
+          <Link href="/signup">
+            <Button variant="primary" className="text-lg px-8 py-3 bg-white text-indigo-900 hover:bg-gray-100">
+              Create Account
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </main>
   )
 }
