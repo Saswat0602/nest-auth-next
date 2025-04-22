@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from './api';
+import { signOut } from 'next-auth/react';
 
 interface User {
   id: number;
@@ -86,6 +87,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
+  // Fetch session on component mount to handle login redirects
+  useEffect(() => {
+    const fetchSession = async () => {
+      setState(prev => ({ ...prev, loading: true }));
+      try {
+        const response = await fetch('/api/auth/session');
+        const session = await response.json();
+
+        if (session && session.user) {
+          setLocalStorage('token', session.access_token || ''); // Assuming session contains access_token
+          setLocalStorage('user', JSON.stringify(session.user));
+          setState({
+            user: session.user,
+            token: session.access_token || null,
+            refreshToken: null, // Refresh token might not be available in session
+            loading: false,
+            error: null,
+          });
+        } else {
+          setState(prev => ({ ...prev, loading: false }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch session:', error);
+        setState(prev => ({ ...prev, loading: false, error: 'Failed to fetch session' }));
+      }
+    };
+
+    fetchSession();
+  }, []);
+
   const login = async (email: string, password: string) => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
@@ -113,19 +144,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const googleLogin = async () => {
+  const googleLogin = async (): Promise<void> => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      // This would be replaced with your actual Google OAuth implementation
-      // For now, simulate a successful login for the UI implementation
-      window.location.href = `/api/auth/signin/google?callbackUrl=${encodeURIComponent('/dashboard')}`;
-      
+      // Call signIn here, within the AuthProvider context
+      if (typeof window !== 'undefined') {
+        // Ensure we're in the browser environment
+        window.location.href = `/api/auth/signin/google?prompt=select_account`;
+      }
     } catch (error) {
-      setState(prev => ({ 
-        ...prev, 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Google login failed' 
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: error instanceof Error ? error.message : 'Google login failed'
       }));
     }
   };
@@ -165,11 +197,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Clear localStorage items
     removeLocalStorage('token');
     removeLocalStorage('refreshToken');
     removeLocalStorage('user');
     
+    // Reset auth state
     setState({
       user: null,
       token: null,
@@ -178,7 +212,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       error: null,
     });
     
-    router.push('/');
+    // Sign out from NextAuth
+    try {
+      await signOut({ redirect: false });
+      // Redirect to home page
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      // Still redirect even if NextAuth signout fails
+      router.push('/');
+    }
   };
 
   const requestPasswordReset = async (email: string) => {

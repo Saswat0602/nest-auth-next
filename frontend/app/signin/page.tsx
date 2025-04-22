@@ -59,10 +59,17 @@ export default function SignInPage() {
     }
   }
 
-  const handleGoogleLogin = () => {
-    setIsGoogleLoading(true)
-    signIn('google', { callbackUrl: '/dashboard' })
-  }
+ const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    try {
+      await signIn('google', { callbackUrl: '/dashboard' });
+    } catch (error) {
+      console.error('Google login error:', error);
+    } finally {
+      // Note: setIsGoogleLoading will not execute after redirect
+      setIsGoogleLoading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen w-full">

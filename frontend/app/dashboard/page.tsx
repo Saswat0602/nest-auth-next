@@ -16,13 +16,23 @@ export default function DashboardPage() {
   useEffect(() => {
     // Wait for NextAuth session or custom token
     if (status === 'loading') return;
+    
+    // User is authenticated if either NextAuth session or custom token exists
     const isAuthed = !!token || status === 'authenticated';
+    
     if (!isAuthed) {
       router.push('/signin');
       return;
     }
+    
     setLoading(false);
-  }, [status, token, router]);
+    
+    // Update auth context with NextAuth session if available
+    if (status === 'authenticated' && session?.user && !user) {
+      // You may want to store the session info in your auth context
+      // This depends on how your auth-context.tsx is implemented
+    }
+  }, [status, token, router, session, user]);
 
   if (loading || status === 'loading') {
     return (
@@ -43,7 +53,16 @@ export default function DashboardPage() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <Button variant="outline" onClick={logout}>
+          <Button 
+            variant="outline" 
+            onClick={async () => {
+              try {
+                await logout();
+              } catch (error) {
+                console.error('Error during logout:', error);
+              }
+            }}
+          >
             Sign Out
           </Button>
         </div>

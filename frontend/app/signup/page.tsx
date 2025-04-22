@@ -94,10 +94,12 @@ export default function SignUpPage() {
     }
   }
 
-  const handleGoogleLogin = () => {
-    setIsGoogleLoading(true)
-    signIn('google', { callbackUrl: '/dashboard' })
-  }
+ const handleGoogleLogin = () => {
+    setIsGoogleLoading(true);
+    if (typeof window !== 'undefined') {
+      window.location.href = `/api/auth/signin/google`;
+    }
+  };
 
   return (
     <div className="flex min-h-screen w-full">
